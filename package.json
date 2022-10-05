@@ -31,7 +31,8 @@
     "eslint": "^8.24.0",
     "eslint-config-google": "^0.14.0",
     "husky": "^8.0.1",
-    "jasmine": "^4.4.0"
+    "jasmine": "^4.4.0",
+    "semantic-release": "^19.0.5"
   },
   "dependencies": {
     "axios": "^1.0.0",
