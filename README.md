@@ -131,9 +131,9 @@ BlockscanChat.message('getAllMsg', {startID: 539070, offset: 99, cType: 2})
 
 Parameters: 
 - address (REQUIRED) -> Address you want to send the message to
-- message (REQUIRED) -> Message you want to sent to that address 
+- message (REQUIRED) -> Message you want to sent to that address <br>
+
 Usage: 
-<br>
 ```bash
 BlockscanChat.message('sendMsg', {address: 'TARGET_ADDRESS', message: 'YOUR_MESSAGE'})
 ```
