@@ -1,6 +1,6 @@
 {
-  "name": "blockscanchat-sdk",
-  "version": "1.0.1",
+  "name": "@blockscan/blockscanchat-sdk",
+  "version": "1.0.2",
   "type": "module",
   "description": "NPM Package for Blockscan Chat APIs",
   "main": "./src/index.js",
@@ -25,7 +25,7 @@
     "type": "git",
     "url": "git+https://github.com/0xYudhishthra/blockscanchat-sdk.git"
   },
-  "author": "",
+  "author": "Blockscan",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/0xYudhishthra/blockscanchat-sdk/issues"
