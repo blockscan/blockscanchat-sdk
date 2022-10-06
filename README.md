@@ -135,7 +135,7 @@ Parameters:
 Usage: 
 <br>
 ```bash
-BlockscanChat.message('getLocalMsgCount')
+BlockscanChat.message('sendMsg', {address: 'TARGET_ADDRESS', message: 'YOUR_MESSAGE'})
 ```
 
 #### `markAllMsgAsRead`
