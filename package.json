@@ -23,14 +23,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/0xYudhishthra/blockscanchat-sdk.git"
+    "url": "git+https://github.com/blockscan/blockscanchat-sdk.git"
   },
   "author": "Blockscan",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/0xYudhishthra/blockscanchat-sdk/issues"
+    "url": "https://github.com/blockscan/blockscanchat-sdk/issues"
   },
-  "homepage": "https://github.com/0xYudhishthra/blockscanchat-sdk#readme",
+  "homepage": "https://github.com/blockscan/blockscanchat-sdk#readme",
   "devDependencies": {
     "@commitlint/cz-commitlint": "^17.1.2",
     "commitlint": "^17.1.2",
