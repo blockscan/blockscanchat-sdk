@@ -1,5 +1,5 @@
 {
-  "name": "@blockscan/blockscanchat-sdk",
+  "name": "blockscanchat-sdk",
   "version": "1.0.2",
   "type": "module",
   "description": "NPM Package for Blockscan Chat APIs",
