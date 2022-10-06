@@ -45,10 +45,10 @@ BLOCKSCAN_CHAT_API_KEY = 'YOUR_BLOCKSCAN_CHAT_API_KEY'
 import BlockscanChat from 'blockscanchat-sdk'; 
 ```
 
-2. Initalize the SDK
+2. Initalize the SDK by passing in the Blockscan API_KEY and API_URL parameters specified as your environment variables
 
 ```bash
-BlockscanChat.init()
+BlockscanChat.init(process.env.BLOCKSCAN_CHAT_API_KEY, process.env.BLOCKSCAN_CHAT_API_URL)
 ```
 
 3. Generally, for all methods, the calling convention is
