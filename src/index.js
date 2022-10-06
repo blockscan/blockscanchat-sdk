@@ -1,19 +1,6 @@
-/**
- * 1. Get unread message count for the wallet address tied to my API key || Call example: blockscanChat.message('getUnreadMessageCount'
- * 2. Get first message ID || Call example: blockscanChat.getFirstMessageId()
- * 3. Get last message ID || Call example: blockscanChat.getLastMessageId()
- * 4. Retrieve all messages with no parameters || Call example: blockscanChat.getAllMessages(START_ID=0, OFFSET=0, CHAT_TYPE=0)
- * 5. Send one message to one address || Call example: blockscanChat.sendMessage(ADDRESS, MESSAGE)
- * 6. Send one message to multiple addresses || Call example: blockscanChat.sendMessage([ADDRESS1, ADDRESS2, ADDRESS3], MESSAGE) #future implementation
- * 7. Mark all messages as read with address || Call example: blockscanChat.markAllMessagesAsRead(ADDRESS)
- */
-
-import dotenv from 'dotenv';
 import ethers from 'ethers';
 import axios from 'axios';
 import FormData from 'form-data';
-
-dotenv.config();
 
 class BlockscanChat {
   constructor() {
@@ -203,23 +190,23 @@ class BlockscanChat {
     };
   }
 
-  init() {
+  init(apiKey, apiUrl) {
     // Ensure that this method is only called once and before any other method
     if (this.apiKey) {
       throw new Error('Please only call init() once.');
     }
 
     // First check if the 2 environment variables are set. If only api key set but not the api url, throw an error asking to set the api url. If only api url set but not the api key, throw an error asking to set the api key. If both are not set, throw an error asking to set both.
-    if (!process.env.BLOCKSCAN_CHAT_API_KEY && !process.env.BLOCKSCAN_CHAT_API_URL) {
+    if (!apiKey && !apiUrl) {
       throw new Error('BLOCKSCAN_CHAT_API_KEY and BLOCKSCAN_CHAT_API_URL environment variables must be set');
-    } else if (!process.env.BLOCKSCAN_CHAT_API_KEY) {
+    } else if (!apiKey) {
       throw new Error('BLOCKSCAN_CHAT_API_KEY environment variable must be set');
-    } else if (!process.env.BLOCKSCAN_CHAT_API_URL) {
+    } else if (!apiUrl) {
       throw new Error('BLOCKSCAN_CHAT_API_URL environment variable must be set');
     } else {
       // Check if the API key is valid
-      this.apiKey = process.env.BLOCKSCAN_CHAT_API_KEY;
-      this.apiUrl = process.env.BLOCKSCAN_CHAT_API_URL;
+      this.apiKey = apiKey;
+      this.apiUrl = apiUrl;
 
       const formData = new FormData();
       formData.append('method', 'ping');
