@@ -50,7 +50,7 @@ describe('BlockscanChat', () => {
     }
   });
 
-  BlockscanChat.init();
+  BlockscanChat.init('api_key','api_url');
 
   /**
      * This part of the test checks the behaviour of the SDK methods
