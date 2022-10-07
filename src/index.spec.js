@@ -19,38 +19,38 @@ describe('BlockscanChat', () => {
     expect(typeof init).toBe('function');
   });
 
-  it('.init should throw an error if no BLOCKSCAN_CHAT_API_KEY is provided', () => {
+  it('.init should throw an error if no BLOCKSCAN_CHAT_API_KEY is provided', (apiKey) => {
     const {init} = BlockscanChat;
     // If no BLOCKSCAN_CHAT_API_KEY is provided, the init method should throw an error
-    if (!process.env.BLOCKSCAN_CHAT_API_KEY) {
+    if (!apiKey) {
       expect(() => init()).toThrow();
     }
   });
 
-  it('.init should throw an error if BLOCKSCAN_CHAT_API_KEY is declared but no value is provided', () => {
+  it('.init should throw an error if BLOCKSCAN_CHAT_API_KEY is declared but no value is provided', (apiKey) => {
     const {init} = BlockscanChat;
     // If no BLOCKSCAN_CHAT_API_KEY is provided, the init method should throw an error
-    if (process.env.BLOCKSCAN_CHAT_API_KEY === '') {
+    if (apiKey === '') {
       expect(() => init()).toThrow();
     }
   });
 
-  it('.init should throw an error if no BLOCKSCAN_CHAT_API_URL is provided', () => {
+  it('.init should throw an error if no BLOCKSCAN_CHAT_API_URL is provided', (apiUrl) => {
     const {init} = BlockscanChat;
-    if (!process.env.BLOCKSCAN_CHAT_API_URL) {
+    if (!apiUrl) {
       expect(() => init()).toThrow();
     }
   });
 
-  it('.init should throw an error if BLOCKSCAN_CHAT_API_URL is declared but no value is provided', () => {
+  it('.init should throw an error if BLOCKSCAN_CHAT_API_URL is declared but no value is provided', (apiUrl) => {
     const {init} = BlockscanChat;
     // If no BLOCKSCAN_CHAT_API_KEY is provided, the init method should throw an error
-    if (process.env.BLOCKSCAN_CHAT_API_URL === '') {
+    if (apiUrl === '') {
       expect(() => init()).toThrow();
     }
   });
 
-  BlockscanChat.init();
+  BlockscanChat.init('api_key','api_url');
 
   /**
      * This part of the test checks the behaviour of the SDK methods

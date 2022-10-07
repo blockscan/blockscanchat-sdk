@@ -30,13 +30,6 @@ npm i blockscanchat-sdk
 ...
 ```
 
-3. Create a .env file in the root of your project directory with these values
-
-```bash
-BLOCKSCAN_CHAT_API_URL = 'YOUR_BLOCKSCAN_CHAT_API_URL'
-BLOCKSCAN_CHAT_API_KEY = 'YOUR_BLOCKSCAN_CHAT_API_KEY'
-```
-
 ## Usage
 
 1. Import the package to your project
@@ -48,7 +41,7 @@ import BlockscanChat from 'blockscanchat-sdk';
 2. Initalize the SDK by passing in the Blockscan API_KEY and API_URL parameters specified as your environment variables
 
 ```bash
-BlockscanChat.init(process.env.BLOCKSCAN_CHAT_API_KEY, process.env.BLOCKSCAN_CHAT_API_URL)
+BlockscanChat.init(api_key, api_url)
 ```
 
 3. Generally, for all methods, the calling convention is
