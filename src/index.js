@@ -1,4 +1,4 @@
-import ethers from 'ethers';
+import { Keccak } from 'sha3';
 import axios from 'axios';
 import FormData from 'form-data';
 
@@ -40,7 +40,7 @@ class BlockscanChat {
             throw new Error('Only the address parameter is allowed for the message.getExternalMsgCount method.');
           } else if (typeof params.address != 'string') {
             throw new Error('The address parameter must be a string.');
-          } else if (!ethers.utils.isAddress(params.address)) {
+          } else if (!this.isAddress(params.address)) {
             throw new Error('The address parameter must be a valid address.');
           }
           return {
@@ -142,7 +142,7 @@ class BlockscanChat {
           }
 
           // Check if the parameters are in the correct order.
-          if (!ethers.utils.isAddress(params.address) && typeof params.message == 'string') {
+          if (!this.isAddress(params.address) && typeof params.message == 'string') {
             throw new Error('Ensure that the first parameter is the address and the second parameter is the message.');
           }
 
@@ -173,7 +173,7 @@ class BlockscanChat {
             throw new Error('Please only provide an address to use the message.markAllMsgAsRead method.');
           } else if (typeof params.address != 'string') {
             throw new Error('The address parameter must be a string.');
-          } else if (!ethers.utils.isAddress(params.address)) {
+          } else if (!this.isAddress(params.address)) {
             throw new Error('The address parameter must be a valid address.');
           }
 
@@ -213,11 +213,11 @@ class BlockscanChat {
       formData.append('apikey', this.apiKey);
 
       axios.post(`${this.apiUrl}`, formData)
-          .then((response) => {
-            if (response.data.status != '1') {
-              throw new Error('Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable');
-            }
-          });
+        .then((response) => {
+          if (response.data.status != '1') {
+            throw new Error('Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable');
+          }
+        });
     }
   }
 
@@ -246,12 +246,53 @@ class BlockscanChat {
 
     // If there is no api key, throw an error asking to call init() first
     return axios.post(`${this.apiUrl}`, formData)
-        .then((response) => {
-          return response.data.result;
-        })
-        .catch((error) => {
-          return error;
-        });
+      .then((response) => {
+        return response.data.result;
+      })
+      .catch((error) => {
+        return error;
+      });
+  }
+
+  isAddress(address) {
+    try {
+      this.toChecksumAddress(address);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  toChecksumAddress(address) {
+    if (typeof (address) !== "string") {
+      logger.throwArgumentError("invalid address", "address", address);
+    }
+
+    if (!/^(0x)?[0-9a-f]{40}$/i.test(address)) {
+      throw new Error(`Invalid Ethereum address "${address}"`);
+    }
+
+    const _address = address.toLowerCase().replace(/^0x/i, '');
+    const keccak = new Keccak(256);
+    const addressHash = keccak.update(_address).digest('hex').replace(/^0x/i, '');
+    let checksumAddress = '0x';
+
+    for (let i = 0; i < _address.length; i++) {
+      // If ith character is 8 to f then make it uppercase
+      if (parseInt(addressHash[i], 16) > 7) {
+        checksumAddress += _address[i].toUpperCase();
+      } else {
+        checksumAddress += _address[i];
+      }
+    }
+
+    if (
+      address.match(/([A-F].*[a-f])|([a-f].*[A-F])/) &&
+      checksumAddress !== address
+    ) {
+      throw new Error(`Invalid Checksum address for "${address}"`);
+    }
+    return checksumAddress;
   }
 }
 
