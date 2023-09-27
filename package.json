@@ -1,6 +1,6 @@
 {
   "name": "blockscanchat-sdk",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "NPM Package for Blockscan Chat APIs",
   "main": "./src/index.js",
   "keywords": [
