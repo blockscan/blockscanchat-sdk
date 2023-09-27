@@ -1,258 +1,367 @@
-import { Keccak } from 'sha3';
-import axios from 'axios';
-import FormData from 'form-data';
+const { Keccak } = require("sha3");
+const axios = require("axios");
+const FormData = require("form-data");
 
+/**
+ * Represents the BlockscanChat class for interacting with the Blockscan Chat API.
+ *
+ * @class
+ * @example
+ * const blockscanChat = new BlockscanChat();
+ * blockscanChat.init("YOUR_API_KEY")
+ *   .then(() => {
+ *     // API initialized successfully
+ *   })
+ *   .catch((error) => {
+ *     console.error("Failed to initialize API:", error);
+ *   });
+ */
 class BlockscanChat {
+  /**
+   * Initializes the BlockscanChat class.
+   *
+   * Sets the `apiKey` property to an empty string and the `apiUrl` property to "https://chatapi.blockscan.com/v1/api".
+   * Defines the `request` method for making API requests.
+   */
   constructor() {
-    this.endpoints = {
-      /**
-              * @name message
-              * @description Get unread message count for the wallet address tied to API key
-              */
-      message: {
-        /**
-                  *
-                  * @param {*} params
-                  * @returns
-                  */
-        getLocalMsgCount: (params = {}) => {
-          // Ensure no extra parameters are passed
-          if (Object.keys(params).length > 0) {
-            throw new Error('Invalid parameters passed to getLocalMsgCount method');
-          }
-          return {
-            method: 'POST',
-            body: {
-              'method': 'unreadmsgcount',
-              'apikey': this.apiKey,
-            },
-          };
-        },
-        /**
-                  *
-                  * @param {string} address - The address to get the unread message count for
-                  * @return The number of unread messages for the address provided
-                  */
-        getExternalMsgCount: (params = {}) => {
-          if (params.address == undefined) {
-            throw new Error('Please provide an address to use the message.getExternalMsgCount method.');
-          } else if (Object.keys(params).length > 1) {
-            throw new Error('Only the address parameter is allowed for the message.getExternalMsgCount method.');
-          } else if (typeof params.address != 'string') {
-            throw new Error('The address parameter must be a string.');
-          } else if (!this.isAddress(params.address)) {
-            throw new Error('The address parameter must be a valid address.');
-          }
-          return {
-            method: 'POST',
-            body: {
-              'method': 'unreadmsgcount',
-              'apikey': this.apiKey,
-              'address': params.address,
-            },
-          };
-        },
-        /**
-                  *
-                  * @param {*} params
-                  * @returns
-                  */
-        getFirstMsgId: (params = {}) => {
-          // Ensure no extra parameters are passed
-          if (Object.keys(params).length > 0) {
-            throw new Error('Invalid parameters passed to getFirstMsgId method');
-          }
-          return {
-            method: 'POST',
-            body: {
-              'method': 'getfirstmsgid',
-              'apikey': this.apiKey,
-            },
-          };
-        },
-        /**
-                  *
-                  * @param {*} params
-                  * @returns
-                  */
-        getLastMsgId: (params = {}) => {
-          // Ensure no extra parameters are passed
-          if (Object.keys(params).length > 0) {
-            throw new Error('Invalid parameters passed to getLastMsgId method');
-          }
-          return {
-            method: 'POST',
-            body: {
-              'method': 'getlastmsgid',
-              'apikey': this.apiKey,
-            },
-          };
-        },
-        /**
-                  *
-                  * @param {*} params
-                  * @returns
-                  */
-        getAllMsg: (params = {}) => {
-          const methodParams = ['startId', 'offset', 'cType'];
-          const userParams = Object.keys(params);
+    this.apiKey = "";
+    this.apiUrl = "https://chatapi.blockscan.com/v1/api";
+    this.request = async (endpoint = {}) => {
+      if (!endpoint.method || !endpoint.body) {
+        throw new Error("Please provide a valid endpoint object.");
+      }
 
-          // Ensure no extra parameters are passed
-          if (Object.keys(params).length > 3) {
-            throw new Error('Invalid parameters passed to getAllMsg method');
-          } // ensure that the parameters passed are valid
-          else if (userParams.length > 0) {
-            for (let i = 0; i < userParams.length; i++) {
-              if (!methodParams.includes(userParams[i])) {
-                throw new Error(`Invalid parameter passed to getAllMsg method: ${userParams[i]}, please use one of the following: ${methodParams.join(', ')}`);
-              } // for the valid parameters, check that the values are valid
-              else {
-                if (userParams[i] == 'startId' && typeof params[userParams[i]] != 'number') {
-                  throw new Error(`Invalid parameter type passed to getAllMsg method: ${userParams[i]}, please provide an Integer`);
-                  // offset must be a number that does not exceed 100 and is greater than or equal to 0
-                } else if (userParams[i] == 'offset' && (typeof params[userParams[i]] != 'number' || params[userParams[i]] > 100 || params[userParams[i]] < 0)) {
-                  throw new Error(`Invalid parameter type passed to getAllMsg method: ${userParams[i]}, please provide an Integer between 0 and 100`);
-                  // cType must be a number that does not exceed 2 and is greater than or equal to 0
-                } else if (userParams[i] == 'cType' && (typeof params[userParams[i]] != 'number' || params[userParams[i]] > 2 || params[userParams[i]] < 0)) {
-                  throw new Error(`Invalid parameter type passed to getAllMsg method: ${userParams[i]}, please provide an Integer between 0 and 2`);
-                }
-              }
-            }
-          }
-          return {
-            method: 'POST',
-            body: {
-              'method': 'getchat',
-              'apikey': this.apiKey,
-              'startid': params?.startid ? params.startid : 0,
-              'offset': params?.offset ? params.offset : 0,
-              'ctype': params?.ctype ? params.ctype : 0,
-            },
-          };
-        },
-        /**
-                  *
-                  * @param {*} params
-                  * @returns
-                  */
-        sendMsg: (params = {}) => {
-          // Ensure that there are two parameters passed in the {} object
-          if (params.address == undefined || params.message == undefined) {
-            throw new Error('Please provide an address and message to use the message.sendMsg method.');
-          }
+      if (!this.apiKey) {
+        throw new Error("Please call init() before calling any other method.");
+      }
 
-          // Check if the parameters are in the correct order.
-          if (!this.isAddress(params.address) && typeof params.message == 'string') {
-            throw new Error('Ensure that the first parameter is the address and the second parameter is the message.');
-          }
+      const formData = new FormData();
+      for (const [key, value] of Object.entries(endpoint.body)) {
+        formData.append(key, value);
+      }
 
-          if (Object.keys(params).length > 2) {
-            throw new Error('Please only provide an address and message to use the message.sendMsg method.');
-          }
-
-          return {
-            method: 'POST',
-            body: {
-              'method': 'sendchat',
-              'apikey': this.apiKey,
-              'to': params.address,
-              'msg': params.message,
-            },
-          };
-        },
-        /**
-                  *
-                  * @param {*} params
-                  * @returns
-                  */
-        markAllMsgAsRead: (params = {}) => {
-          // Ensure that no other parameters are passed in the {} object, only the address
-          if (params.address == undefined) {
-            throw new Error('Please provide an address to use the message.markAllMsgAsRead method.');
-          } else if (Object.keys(params).length > 1) {
-            throw new Error('Please only provide an address to use the message.markAllMsgAsRead method.');
-          } else if (typeof params.address != 'string') {
-            throw new Error('The address parameter must be a string.');
-          } else if (!this.isAddress(params.address)) {
-            throw new Error('The address parameter must be a valid address.');
-          }
-
-          return {
-            method: 'POST',
-            body: {
-              method: 'markmsgread',
-              apikey: this.apiKey,
-              address: params.address,
-            },
-          };
-        },
-      },
+      try {
+        const response = await axios.post(`${this.apiUrl}`, formData);
+        return response.data.result;
+      } catch (error) {
+        throw error;
+      }
     };
   }
 
-  init(apiKey, apiUrl) {
-    // Ensure that this method is only called once and before any other method
+  /**
+   * Initializes the BlockscanChat class with an API key.
+   *
+   * @param {string} apiKey - The API key to be used for authentication.
+   * @returns {Promise} A promise that resolves when the initialization is successful.
+   * @throws {Error} If `init` is called more than once.
+   * @throws {Error} If `apiKey` is not provided.
+   * @throws {Error} If the provided API key is invalid.
+   */
+
+  async init(apiKey) {
     if (this.apiKey) {
-      throw new Error('Please only call init() once.');
+      throw new Error("Please only call init() once.");
     }
 
-    // First check if the 2 environment variables are set. If only api key set but not the api url, throw an error asking to set the api url. If only api url set but not the api key, throw an error asking to set the api key. If both are not set, throw an error asking to set both.
-    if (!apiKey && !apiUrl) {
-      throw new Error('BLOCKSCAN_CHAT_API_KEY and BLOCKSCAN_CHAT_API_URL environment variables must be set');
-    } else if (!apiKey) {
-      throw new Error('BLOCKSCAN_CHAT_API_KEY environment variable must be set');
-    } else if (!apiUrl) {
-      throw new Error('BLOCKSCAN_CHAT_API_URL environment variable must be set');
-    } else {
-      // Check if the API key is valid
-      this.apiKey = apiKey;
-      this.apiUrl = apiUrl;
-
-      const formData = new FormData();
-      formData.append('method', 'ping');
-      formData.append('apikey', this.apiKey);
-
-      axios.post(`${this.apiUrl}`, formData)
-        .then((response) => {
-          if (response.data.status != '1') {
-            throw new Error('Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable');
-          }
-        });
-    }
-  }
-
-  message(method = '', params = {}) {
-    if (this.endpoints.message[method] == undefined) {
-      throw new Error('Please provide a valid method for the message method.');
-    } else {
-      return this.request(this.endpoints.message[method](params));
-    }
-  }
-
-  request(endpoint = {}) {
-    // this should be called by the message method only and not directly
-    if (endpoint.method == undefined || endpoint.body == undefined) {
-      throw new Error('Please provide a valid endpoint object to use the request method.');
+    if (!apiKey) {
+      throw new Error(
+        "BLOCKSCAN_CHAT_API_KEY environment variables must be set"
+      );
     }
 
-    if (!this.apiKey) {
-      throw new Error('Please call init() before calling any other method.');
-    }
+    this.apiKey = apiKey;
 
     const formData = new FormData();
-    for (const [key, value] of Object.entries(endpoint.body)) {
-      formData.append(key, value);
+    formData.append("method", "ping");
+    formData.append("apikey", this.apiKey);
+
+    const response = await axios.post(`${this.apiUrl}`, formData);
+    if (response?.data.status !== "1") {
+      throw new Error(
+        "Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable"
+      );
+    }
+  }
+
+  /**
+   * Retrieves the count of unread local messages.
+   *
+   * @returns {Promise<number>} The count of unread local messages.
+   *
+   * @example
+   * getLocalMsgCount()
+   *   .then((msgCount) => {
+   *     console.log(msgCount);
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to retrieve the count of unread local messages:", error);
+   *   });
+   */
+  getLocalMsgCount() {
+    return this.request({
+      method: "POST",
+      body: {
+        method: "unreadmsgcount",
+        apikey: this.apiKey,
+      },
+    });
+  }
+
+  /**
+   * Retrieves the count of unread messages for a specific address.
+   *
+   * @param {string} address - The address for which to retrieve the message count.
+   * @returns {Promise<number>} The count of unread messages for the address.
+   * @throws {Error} If the address is not provided or is not of type string.
+   * @throws {Error} If the address is not a valid address.
+   *
+   * @example
+   * getExternalMsgCount("0x1234567890123456789012345678901234567890")
+   *   .then((msgCount) => {
+   *     console.log(msgCount);
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to retrieve the count of unread messages:", error);
+   *   });
+   */
+
+  getExternalMsgCount(address) {
+    if (!address || typeof address !== "string") {
+      throw new Error("Please provide a valid address.");
+    }
+    if (!this.isAddress(address)) {
+      throw new Error("The address parameter must be a valid address.");
     }
 
-    // If there is no api key, throw an error asking to call init() first
-    return axios.post(`${this.apiUrl}`, formData)
-      .then((response) => {
-        return response.data.result;
-      })
-      .catch((error) => {
-        return error;
-      });
+    return this.request({
+      method: "POST",
+      body: {
+        method: "unreadmsgcount",
+        apikey: this.apiKey,
+        address,
+      },
+    });
   }
+
+  /**
+   * Retrieves the ID of the first chat message.
+   *
+   * @returns {Promise<number>} The ID of the first chat message.
+   *
+   * @example
+   * getFirstMsgId()
+   *   .then((firstMsgId) => {
+   *     console.log(firstMsgId);
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to retrieve the ID of the first chat message:", error);
+   *   });
+   */
+
+  getFirstMsgId() {
+    return this.request({
+      method: "POST",
+      body: {
+        method: "getfirstmsgid",
+        apikey: this.apiKey,
+      },
+    });
+  }
+
+  /**
+   * Retrieves the ID of the last chat message.
+   *
+   * @returns {Promise<number>} The ID of the last chat message.
+   *
+   * @example
+   * getLastMsgId()
+   *   .then((lastMsgId) => {
+   *     console.log(lastMsgId);
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to retrieve the ID of the last chat message:", error);
+   *   });
+   */
+
+  getLastMsgId() {
+    return this.request({
+      method: "POST",
+      body: {
+        method: "getlastmsgid",
+        apikey: this.apiKey,
+      },
+    });
+  }
+
+  /**
+   * Retrieves chat messages based on the provided parameters.
+   *
+   * @param {Object} [params={}] - The parameters for retrieving chat messages.
+   * @param {number} [params.startId=0] - The ID of the starting message.
+   * @param {number} [params.offset=0] - The number of messages to offset from the starting message.
+   * @param {number} [params.cType=0] - The type of chat messages to retrieve.
+   * @returns {Promise} A promise that resolves with the retrieved chat messages.
+   * @throws {Error} If invalid parameters are passed to the getAllMsg method.
+   * @throws {Error} If the parameter types are invalid or out of range.
+   *
+   * @example
+   * getAllMsg({ startId: 1, offset: 10, cType: 1 })
+   *   .then((messages) => {
+   *     console.log(messages);
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to retrieve chat messages:", error);
+   *   });
+   */
+
+  getAllMsg(params = {}) {
+    const methodParams = ["startId", "offset", "cType"];
+    const userParams = Object.keys(params);
+
+    if (userParams.length > 3) {
+      throw new Error("Invalid parameters passed to getAllMsg method");
+    }
+
+    for (const param of userParams) {
+      if (!methodParams.includes(param)) {
+        throw new Error(
+          `Invalid parameter passed to getAllMsg method: ${param}, please use one of the following: ${methodParams.join(
+            ", "
+          )}`
+        );
+      }
+
+      if (param === "startId" && typeof params[param] !== "number") {
+        throw new Error(
+          `Invalid parameter type passed to getAllMsg method: ${param}, please provide an Integer`
+        );
+      }
+
+      if (
+        param === "offset" &&
+        (typeof params[param] !== "number" ||
+          params[param] > 100 ||
+          params[param] < 0)
+      ) {
+        throw new Error(
+          `Invalid parameter type passed to getAllMsg method: ${param}, please provide an Integer between 0 and 100`
+        );
+      }
+
+      if (
+        param === "cType" &&
+        (typeof params[param] !== "number" ||
+          params[param] > 2 ||
+          params[param] < 0)
+      ) {
+        throw new Error(
+          `Invalid parameter type passed to getAllMsg method: ${param}, please provide an Integer between 0 and 2`
+        );
+      }
+    }
+
+    return this.request({
+      method: "POST",
+      body: {
+        method: "getchat",
+        apikey: this.apiKey,
+        startid: params.startId || 0,
+        offset: params.offset || 0,
+        ctype: params.cType || 0,
+      },
+    });
+  }
+
+  /**
+   * Sends a chat message to the specified address.
+   *
+   * @param {string} address - The address to send the message to.
+   * @param {string} message - The message to be sent.
+   * @returns {Promise} A promise that resolves when the message is successfully sent.
+   * @throws {Error} If either the address or message is not provided, or if they are not of type string.
+   * @throws {Error} If the address is not a valid address.
+   *
+   * @example
+   * sendMsg("0x1234567890123456789012345678901234567890", "Hello, how are you?")
+   *   .then(() => {
+   *     console.log("Message sent successfully");
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to send message:", error);
+   *   });
+   */
+
+  sendMsg(address, message) {
+    if (
+      !address ||
+      !message ||
+      typeof address !== "string" ||
+      typeof message !== "string"
+    ) {
+      throw new Error("Please provide both a valid address and message.");
+    }
+    if (!this.isAddress(address)) {
+      throw new Error("The address parameter must be a valid address.");
+    }
+
+    return this.request({
+      method: "POST",
+      body: {
+        method: "sendchat",
+        apikey: this.apiKey,
+        to: address,
+        msg: message,
+      },
+    });
+  }
+
+  /**
+   * Marks all messages as read for the specified address.
+   *
+   * @param {string} address - The address for which to mark messages as read.
+   * @returns {Promise} A promise that resolves when the messages are successfully marked as read.
+   * @throws {Error} If the address is not provided or is not of type string.
+   * @throws {Error} If the address is not a valid address.
+   *
+   * @example
+   * markAllMsgAsRead("0x1234567890123456789012345678901234567890")
+   *   .then(() => {
+   *     console.log("Messages marked as read");
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to mark messages as read:", error);
+   *   });
+   */
+
+  markAllMsgAsRead(address) {
+    if (!address || typeof address !== "string") {
+      throw new Error("Please provide a valid address.");
+    }
+    if (!this.isAddress(address)) {
+      throw new Error("The address parameter must be a valid address.");
+    }
+
+    return this.request({
+      method: "POST",
+      body: {
+        method: "markmsgread",
+        apikey: this.apiKey,
+        address,
+      },
+    });
+  }
+
+  /**
+   * Checks if the given address is a valid Ethereum address.
+   *
+   * @param {string} address - The address to be checked.
+   * @returns {boolean} True if the address is valid, false otherwise.
+   *
+   * @example
+   * const isValid = isAddress("0x1234567890123456789012345678901234567890");
+   * console.log(isValid); // Output: true
+   */
 
   isAddress(address) {
     try {
@@ -263,22 +372,37 @@ class BlockscanChat {
     }
   }
 
+  /**
+   * Converts the given Ethereum address to its checksum address format.
+   *
+   * @param {string} address - The Ethereum address to be converted.
+   * @returns {string} The checksum address.
+   * @throws {Error} If the address is not a string or is not a valid Ethereum address.
+   * @throws {Error} If the checksum address is invalid.
+   *
+   * @example
+   * const checksumAddress = toChecksumAddress("0x1234567890123456789012345678901234567890");
+   * console.log(checksumAddress); // Output: "0x1234567890123456789012345678901234567890"
+   */
+
   toChecksumAddress(address) {
-    if (typeof (address) !== "string") {
-      logger.throwArgumentError("invalid address", "address", address);
+    if (typeof address !== "string") {
+      throw new Error("Invalid address");
     }
 
     if (!/^(0x)?[0-9a-f]{40}$/i.test(address)) {
       throw new Error(`Invalid Ethereum address "${address}"`);
     }
 
-    const _address = address.toLowerCase().replace(/^0x/i, '');
+    const _address = address.toLowerCase().replace(/^0x/i, "");
     const keccak = new Keccak(256);
-    const addressHash = keccak.update(_address).digest('hex').replace(/^0x/i, '');
-    let checksumAddress = '0x';
+    const addressHash = keccak
+      .update(_address)
+      .digest("hex")
+      .replace(/^0x/i, "");
+    let checksumAddress = "0x";
 
     for (let i = 0; i < _address.length; i++) {
-      // If ith character is 8 to f then make it uppercase
       if (parseInt(addressHash[i], 16) > 7) {
         checksumAddress += _address[i].toUpperCase();
       } else {
@@ -292,8 +416,8 @@ class BlockscanChat {
     ) {
       throw new Error(`Invalid Checksum address for "${address}"`);
     }
+
     return checksumAddress;
   }
 }
-
-export default new BlockscanChat;
+module.exports = BlockscanChat;
