@@ -16,7 +16,7 @@ jest.mock("sha3", () => {
 
 describe("BlockscanChat", () => {
   let blockscanChat;
-  const validAPIKey = "FdpZvZGMdhEiyUIajJc9KN7TIxXrCXVjxe8hZBaKfHrNMA2cAtdFwy";
+  let validAPIKey = "";
 
   beforeEach(() => {
     blockscanChat = new BlockscanChat();
