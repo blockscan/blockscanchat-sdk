@@ -1,285 +1,246 @@
-// import BlockscanChat from "./index.js";
-// import dotenv from "dotenv";
-// dotenv.config();
+import axios from "axios";
+import FormData from "form-data";
+import { Keccak } from "sha3";
+import BlockscanChat from "./index.js";
 
-// const { init } = BlockscanChat;
+jest.mock("axios");
+jest.mock("form-data");
+jest.mock("sha3", () => {
+  return {
+    Keccak: jest.fn(() => ({
+      update: jest.fn().mockReturnThis(),
+      digest: jest.fn(),
+    })),
+  };
+});
 
-// /**
-//  * This part of the test checks the behavior of the BlockscanChat SDK itself
-//  */
-// describe("BlockscanChat", () => {
-//   // check if the constructor is working
-//   it("should be an object", () => {
-//     expect(typeof BlockscanChat).toBe("object");
-//   });
+describe("BlockscanChat", () => {
+  let blockscanChat;
+  const validAPIKey = "FdpZvZGMdhEiyUIajJc9KN7TIxXrCXVjxe8hZBaKfHrNMA2cAtdFwy";
 
-//   /**
-//    * This part of the test checks the behavior of the BlockscanChat SDK when it is initialized
-//    */
-//   it("should have a method called init", () => {
-//     expect(typeof init).toBe("function");
-//   });
+  beforeEach(() => {
+    blockscanChat = new BlockscanChat();
+    FormData.prototype.append = jest.fn();
+  });
 
-//   it(".init should throw an error if no BLOCKSCAN_CHAT_API_KEY is provided", async () => {
-//     await expectAsync(init("")).toBeR
-//   }, 6000);
+  describe("constructor", () => {
+    it("should properly initialize properties", () => {
+      expect(blockscanChat.apiKey).toBe("");
+      expect(blockscanChat.apiUrl).toBe("https://chatapi.blockscan.com/v1/api");
+      expect(typeof blockscanChat.request).toBe("function");
+    });
+  });
 
-//   // it(".init should throw an error if BLOCKSCAN_CHAT_API_KEY is declared but no value is provided", (apiKey) => {
-//   //   const { init } = BlockscanChat;
-//   //   // If no BLOCKSCAN_CHAT_API_KEY is provided, the init method should throw an error
-//   //   if (apiKey === "") {
-//   //     expect(() => init()).toThrow();
-//   //   }
-//   // });
+  describe("init", () => {
+    // it("should throw an error if init is called more than once", async () => {
+    //   expect.assertions(1);
+    //   blockscanChat.init(validAPIKey);
+    //   expect(blockscanChat.init(validAPIKey)).rejects.toThrow(
+    //     "Please only call init() once."
+    //   );
+    // });
 
-//   // /**
-//   //  * This part of the test checks the behaviour of the SDK methods
-//   //  */
+    it("should throw an error if no API key is provided", async () => {
+      expect.assertions(1);
+      await expect(blockscanChat.init()).rejects.toThrow(
+        "BLOCKSCAN_CHAT_API_KEY environment variables must be set"
+      );
+    });
 
-//   // /**
-//   //  * Check the BlockscanChat.message methods
-//   //  */
-//   // it("should have a method called message", () => {
-//   //   expect(typeof BlockscanChat.message).toBe("function");
-//   // });
+    it("should throw an error if the provided API key is invalid", async () => {
+      expect.assertions(1);
+      axios.post.mockResolvedValueOnce({ data: { status: "0" } });
+      await expect(blockscanChat.init("invalidAPIKey")).rejects.toThrow(
+        "Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable"
+      );
+    });
 
-//   // // If no method is provided, the message method should throw an error
-//   // it(".message should throw an error if no method is provided", () => {
-//   //   expect(() => BlockscanChat.message()).toThrow();
-//   // });
+    it("should initialize with a valid API key", async () => {
+      axios.post.mockResolvedValueOnce({ data: { status: "1" } });
+      await blockscanChat.init(validAPIKey);
+      expect(blockscanChat.apiKey).toBe(validAPIKey);
+    });
+  });
 
-//   // // If only params are provided, the message method should throw an error
-//   // it(".message should throw an error if only params are provided", () => {
-//   //   expect(() => BlockscanChat.message({})).toThrow();
-//   // });
+  describe("getLocalMsgCount", () => {
+    it("should get the local message count", async () => {
+      blockscanChat.apiKey = validAPIKey;
+      axios.post.mockResolvedValueOnce({ data: { result: 5 } });
+      const count = await blockscanChat.getLocalMsgCount();
+      console.log(count);
+      expect(count).toBe(5);
+    });
 
-//   // it('.message should not throw an error if the "getLocalMsgCount" is provided with the BlockscanChat.message call', () => {
-//   //   expect(() => BlockscanChat.message("getLocalMsgCount")).not.toThrow();
-//   // });
+    it("should throw an error if init is not called before", async () => {
+      expect.assertions(1);
+      await expect(blockscanChat.getLocalMsgCount()).rejects.toThrow(
+        "Please call init() before calling any other method."
+      );
+    });
+  });
 
-//   // // getLocalMsgCount method should not accept any params
-//   // it('.message should throw an error if the "getLocalMsgCount" is provided with params', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getLocalMsgCount", { address: "testaddress" })
-//   //   ).toThrow();
-//   // });
+  describe("getExternalMsgCount", () => {
+    it("should get the external message count", async () => {
+      blockscanChat.apiKey = validAPIKey;
+      axios.post.mockResolvedValueOnce({ data: { result: 3 } });
+      const count = await blockscanChat.getExternalMsgCount(
+        "0x66263b35bae43592b4A46F4Fca4D8613987610d4"
+      );
+      expect(count).toBe(3);
+    });
 
-//   // it('.message should throw an error if the "getExternalMsgCount" is not provided with an address parameter', () => {
-//   //   expect(() => BlockscanChat.message("getExternalMsgCount")).toThrow();
-//   // });
+    // it("should throw an error if address is not provided", async () => {
+    //   expect.assertions(1);
+    //   blockscanChat.apiKey = "test-api-key";
+    //   await expect(blockscanChat.getExternalMsgCount()).rejects.toThrow(
+    //     "Please provide a valid address."
+    //   );
+    // });
 
-//   // // throw error if more than 1 param is provided to getExternalMsgCount
-//   // it('.message should throw an error if the "getExternalMsgCount" is provided with more than 1 param', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getExternalMsgCount", {
-//   //       address: "testaddress",
-//   //       address2: "testaddress",
-//   //     })
-//   //   ).toThrow();
-//   // });
+    // it("should throw an error if address is not valid", async () => {
+    //   expect.assertions(1);
+    //   blockscanChat.apiKey = "test-api-key";
+    //   await expect(
+    //     blockscanChat.getExternalMsgCount("invalid-address")
+    //   ).rejects.toThrow("The address parameter must be a valid address.");
+    // });
+  });
 
-//   // // throw error if the "getExternalMsgCount" is provided with an address parameter that is a string and not a valid address
-//   // it('.message should not throw an error if the "getExternalMsgCount" is provided with an address parameter that is a string', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getExternalMsgCount", { address: "testaddress" })
-//   //   ).toThrow();
-//   // });
+  //   describe("getFirstMsgId", () => {
+  //     it("should get the ID of the first message", async () => {
+  //       blockscanChat.apiKey = "test-api-key";
+  //       axios.post.mockResolvedValueOnce({ data: { result: 1 } });
+  //       const id = await blockscanChat.getFirstMsgId();
+  //       expect(id).toBe(1);
+  //     });
 
-//   // // throw if the "getExternalMsgCount" is provided with an address parameter that is not a string
-//   // it('.message should throw an error if the "getExternalMsgCount" is provided with an address parameter that is not a string', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getExternalMsgCount", { address: 123 })
-//   //   ).toThrow();
-//   // });
+  //     it("should throw an error if init is not called before", async () => {
+  //       expect.assertions(1);
+  //       await expect(blockscanChat.getFirstMsgId()).rejects.toThrow(
+  //         "Please call init() before calling any other method."
+  //       );
+  //     });
+  //   });
 
-//   // // getFirstMsg method should not accept any params
-//   // it('.message should throw an error if the "getFirstMsg" is provided with params', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getFirstMsgId", { address: "testaddress" })
-//   //   ).toThrow();
-//   // });
+  //   describe("getLastMsgId", () => {
+  //     it("should get the ID of the last message", async () => {
+  //       blockscanChat.apiKey = "test-api-key";
+  //       axios.post.mockResolvedValueOnce({ data: { result: 10 } });
+  //       const id = await blockscanChat.getLastMsgId();
+  //       expect(id).toBe(10);
+  //     });
 
-//   // // do not throw error if the "getFirstMsg" is provided with no params
-//   // it('.message should not throw an error if the "getFirstMsg" is provided with no params', () => {
-//   //   expect(() => BlockscanChat.message("getFirstMsgId")).not.toThrow();
-//   // });
+  //     it("should throw an error if init is not called before", async () => {
+  //       expect.assertions(1);
+  //       await expect(blockscanChat.getLastMsgId()).rejects.toThrow(
+  //         "Please call init() before calling any other method."
+  //       );
+  //     });
+  //   });
 
-//   // // getLastMsgId method should not accept any params
-//   // it('.message should throw an error if the "getLastMsgId" is provided with params', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getLastMsgId", { address: "testaddress" })
-//   //   ).toThrow();
-//   // });
+  //   describe("getAllMsg", () => {
+  //     it("should get all messages with valid parameters", async () => {
+  //       blockscanChat.apiKey = "test-api-key";
+  //       axios.post.mockResolvedValueOnce({
+  //         data: { result: [{ id: 1, message: "test" }] },
+  //       });
+  //       const messages = await blockscanChat.getAllMsg({
+  //         startId: 1,
+  //         offset: 1,
+  //         cType: 1,
+  //       });
+  //       expect(messages).toEqual([{ id: 1, message: "test" }]);
+  //     });
 
-//   // // do not throw error if the "getLastMsgId" is provided with no params
-//   // it('.message should not throw an error if the "getLastMsgId" is provided with no params', () => {
-//   //   expect(() => BlockscanChat.message("getLastMsgId")).not.toThrow();
-//   // });
+  //     it("should throw an error for invalid parameters", async () => {
+  //       expect.assertions(1);
+  //       blockscanChat.apiKey = "test-api-key";
+  //       await expect(
+  //         blockscanChat.getAllMsg({ invalidParam: "invalid" })
+  //       ).rejects.toThrow(
+  //         "Invalid parameter passed to getAllMsg method: invalidParam, please use one of the following: startId, offset, cType"
+  //       );
+  //     });
+  //   });
 
-//   // // getAllMsg method can optionally accept a startId, offset, or cType parameter
-//   // it('.message should not throw an error if the "getAllMsg" is provided with no parameter', () => {
-//   //   expect(() => BlockscanChat.message("getAllMsg")).not.toThrow();
-//   // });
+  //   describe("sendMsg", () => {
+  //     it("should send a message with valid address and message", async () => {
+  //       blockscanChat.apiKey = "test-api-key";
+  //       axios.post.mockResolvedValueOnce({ data: { result: "Message Sent" } });
+  //       const response = await blockscanChat.sendMsg(
+  //         "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+  //         "Hello"
+  //       );
+  //       expect(response).toBe("Message Sent");
+  //     });
 
-//   // // getAllMsg method can optionally accept a startId parameter, startId should be a number
-//   // it('.message should throw an error if the "getAllMsg" is provided with a startId parameter that is not a number', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { startId: "test" })
-//   //   ).toThrow();
-//   // });
+  //     it("should throw an error for invalid address", async () => {
+  //       expect.assertions(1);
+  //       blockscanChat.apiKey = "test-api-key";
+  //       await expect(
+  //         blockscanChat.sendMsg("invalid-address", "Hello")
+  //       ).rejects.toThrow("The address parameter must be a valid address.");
+  //     });
 
-//   // // getAllMsg method can optionally accept a startId parameter, startId should be a number
-//   // it('.message should not throw an error if the "getAllMsg" is provided with a startId parameter that is a number', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { startId: 1 })
-//   //   ).not.toThrow();
-//   // });
+  //     it("should throw an error for invalid message", async () => {
+  //       expect.assertions(1);
+  //       blockscanChat.apiKey = "test-api-key";
+  //       await expect(
+  //         blockscanChat.sendMsg("0x742d35Cc6634C0532925a3b844Bc454e4438f44e", 123)
+  //       ).rejects.toThrow("Please provide both a valid address and message.");
+  //     });
+  //   });
 
-//   // // getAllMsg method can optionally accept a offset parameter, offset should be a number
-//   // it('.message should throw an error if the "getAllMsg" is provided with a offset parameter that is not a number', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { offset: "test" })
-//   //   ).toThrow();
-//   // });
+  //   describe("markAllMsgAsRead", () => {
+  //     it("should mark all messages as read for valid address", async () => {
+  //       blockscanChat.apiKey = "test-api-key";
+  //       axios.post.mockResolvedValueOnce({ data: { result: "Messages Marked" } });
+  //       const response = await blockscanChat.markAllMsgAsRead(
+  //         "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+  //       );
+  //       expect(response).toBe("Messages Marked");
+  //     });
 
-//   // // getAllMsg method can optionally accept a offset parameter, offset should be a number
-//   // it('.message should not throw an error if the "getAllMsg" is provided with a offset parameter that is a number', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { offset: 1 })
-//   //   ).not.toThrow();
-//   // });
+  //     it("should throw an error for invalid address", async () => {
+  //       expect.assertions(1);
+  //       blockscanChat.apiKey = "test-api-key";
+  //       await expect(
+  //         blockscanChat.markAllMsgAsRead("invalid-address")
+  //       ).rejects.toThrow("The address parameter must be a valid address.");
+  //     });
+  //   });
 
-//   // // getAllMsg method can optionally accept a cType parameter, cType should be a number
-//   // it('.message should throw an error if the "getAllMsg" is provided with a cType parameter that is not a number', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { cType: "test" })
-//   //   ).toThrow();
-//   // });
+  //   describe("isAddress", () => {
+  //     it("should return true for valid checksum address", () => {
+  //       const isAddress = blockscanChat.isAddress(
+  //         "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+  //       );
+  //       expect(isAddress).toBeTruthy();
+  //     });
 
-//   // // getAllMsg method can optionally accept a cType parameter, cType should be a number
-//   // it('.message should not throw an error if the "getAllMsg" is provided with a cType parameter that is a number', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { cType: 1 })
-//   //   ).not.toThrow();
-//   // });
+  //     it("should return false for invalid address", () => {
+  //       const isAddress = blockscanChat.isAddress("invalid-address");
+  //       expect(isAddress).toBeFalsy();
+  //     });
+  //   });
 
-//   // // if a parameter other than startId, offset, or cType is provided, the getAllMsg method should throw an error
-//   // it('.message should throw an error if the "getAllMsg" is provided with a parameter other than startId, offset, or cType', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", { test: "test" })
-//   //   ).toThrow();
-//   // });
+  //   describe("toChecksumAddress", () => {
+  //     it("should convert address to checksum address", () => {
+  //       const keccak = new Keccak(256);
+  //       keccak.update.mockReturnThis();
+  //       keccak.digest.mockReturnValue("5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed");
+  //       const checksumAddress = blockscanChat.toChecksumAddress(
+  //         "0x742d35cc6634c0532925a3b844bc454e4438f44e"
+  //       );
+  //       expect(checksumAddress).toBe(
+  //         "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+  //       );
+  //     });
 
-//   // // if more than 3 parameters are provided, the getAllMsg method should throw an error
-//   // it('.message should throw an error if the "getAllMsg" is provided with more than 3 parameters', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("getAllMsg", {
-//   //       startId: 1,
-//   //       offset: 1,
-//   //       cType: 1,
-//   //       test: "test",
-//   //     })
-//   //   ).toThrow();
-//   // });
-
-//   // // offset can only be a number between 0 and 100
-//   // it('.message should throw an error if the "getAllMsg" is provided with an offset parameter that is not between 0 and 100', () => {
-//   //   expect(() => BlockscanChat.message("getAllMsg", { offset: 101 })).toThrow();
-//   // });
-
-//   // // cType can only be a number between 0 and 2
-//   // it('.message should throw an error if the "getAllMsg" is provided with a cType parameter that is not between 0 and 2', () => {
-//   //   expect(() => BlockscanChat.message("getAllMsg", { cType: 3 })).toThrow();
-//   // });
-
-//   // // sendMsg should throw an error if the message parameter is not provided
-//   // it('.message should throw an error if the "sendMsg" is not provided with a message parameter', () => {
-//   //   expect(() => BlockscanChat.message("sendMsg")).toThrow();
-//   // });
-
-//   // // sendMsg should throw an error if the message parameter is not a string
-//   // it('.message should throw an error if the "sendMsg" is provided with a message parameter that is not a string', () => {
-//   //   expect(() => BlockscanChat.message("sendMsg", { message: 123 })).toThrow();
-//   // });
-
-//   // // sendMsg should throw an error if the message parameter is an empty string
-//   // it('.message should throw an error if the "sendMsg" is provided with a message parameter that is an empty string', () => {
-//   //   expect(() => BlockscanChat.message("sendMsg", { message: "" })).toThrow();
-//   // });
-
-//   // // sendMsg should throw error if address parameter is not provided
-//   // it('.message should throw an error if the "sendMsg" is not provided with an address parameter', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("sendMsg", { message: "test" })
-//   //   ).toThrow();
-//   // });
-
-//   // // sendMsg should throw an error if the address parameter is not a valid wallet address
-//   // it('.message should throw an error if the "sendMsg" is provided with an address parameter that is not a valid wallet address', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("sendMsg", { message: "test", address: "test" })
-//   //   ).toThrow();
-//   // });
-
-//   // // sendMsg should throw an error if the address parameter is an empty string
-//   // it('.message should throw an error if the "sendMsg" is provided with an address parameter that is an empty string', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("sendMsg", { message: "test", address: "" })
-//   //   ).toThrow();
-//   // });
-
-//   // // throw error if more than 2 parameters are provided
-//   // it('.message should throw an error if the "sendMsg" is provided with more than 2 parameters', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("sendMsg", {
-//   //       message: "test",
-//   //       address: "test",
-//   //       test: "test",
-//   //     })
-//   //   ).toThrow();
-//   // });
-
-//   // // markAllMsgAsRead should throw an error if the address parameter is not provided
-//   // it('.message should throw an error if the "markAllMsgAsRead" is not provided with an address parameter', () => {
-//   //   expect(() => BlockscanChat.message("markAllMsgAsRead")).toThrow();
-//   // });
-
-//   // // markAllMsgAsRead should throw an error if the address parameter is not a valid wallet address
-//   // it('.message should throw an error if the "markAllMsgAsRead" is provided with an address parameter that is not a valid wallet address', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("markAllMsgAsRead", { address: "test" })
-//   //   ).toThrow();
-//   // });
-
-//   // // markAllMsgAsRead should throw an error if the address parameter is an empty string
-//   // it('.message should throw an error if the "markAllMsgAsRead" is provided with an address parameter that is an empty string', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("markAllMsgAsRead", { address: "" })
-//   //   ).toThrow();
-//   // });
-
-//   // // markAllMsgAsRead should throw an error if more than 1 parameter is provided
-//   // it('.message should throw an error if the "markAllMsgAsRead" is provided with more than 1 parameter', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("markAllMsgAsRead", {
-//   //       address: "test",
-//   //       test: "test",
-//   //     })
-//   //   ).toThrow();
-//   // });
-
-//   // // throw error if address is not string
-//   // it('.message should throw an error if the "markMsgAsRead" is provided with an address parameter that is not a string', () => {
-//   //   expect(() =>
-//   //     BlockscanChat.message("markMsgAsRead", { address: 123 })
-//   //   ).toThrow();
-//   // });
-
-//   // /**
-//   //  * This part of the test checks the behaviour of the request method
-//   //  */
-//   // // if request is called with a method that is not supported, it should throw an error
-//   // it(".request should throw an error if the method is not supported", () => {
-//   //   expect(() => BlockscanChat.request("test")).toThrow();
-//   // });
-// });
+  //     it("should throw error for invalid address", () => {
+  //       expect(() => blockscanChat.toChecksumAddress("invalid-address")).toThrow(
+  //         'Invalid Ethereum address "invalid-address"'
+  //       );
+  //     });
+  //   });
+});
