@@ -23,6 +23,7 @@ class BlockscanChat {
    * Sets the `apiKey` property to an empty string and the `apiUrl` property to "https://chatapi.blockscan.com/v1/api".
    * Defines the `request` method for making API requests.
    */
+  static instance = null;
   constructor() {
     this.apiKey = "";
     this.apiUrl = "https://chatapi.blockscan.com/v1/api";
@@ -292,7 +293,7 @@ class BlockscanChat {
    *   });
    */
 
-  sendMsg(address, message) {
+  async sendMsg(address, message) {
     if (
       !address ||
       !message ||
@@ -305,7 +306,7 @@ class BlockscanChat {
       throw new Error("The address parameter must be a valid address.");
     }
 
-    return this.request({
+    const response = await this.request({
       method: "POST",
       body: {
         method: "sendchat",
@@ -314,6 +315,49 @@ class BlockscanChat {
         msg: message,
       },
     });
+
+    // Check if the response is a string and is numeric
+    if (typeof response === "string" && /^[0-9]+$/.test(response)) {
+      return response;
+    } else {
+      throw new Error(`Unexpected API response: ${response}`);
+    }
+  }
+
+  /**
+   * Sends a bulk message to a list of addresses.
+   *
+   * @param {string} message - The message to be sent.
+   * @param {string[]} addresses - Array of Ethereum addresses to send the message to.
+   * @returns {Promise[]} An array of promises representing each message sending operation.
+   *
+   * @example
+   * sendBulkMsg("Hello", ["0xAddress1", "0xAddress2"])
+   *   .then((results) => {
+   *     console.log(results);
+   *   })
+   *   .catch((error) => {
+   *     console.error("Failed to send bulk messages:", error);
+   *   });
+   */
+  async sendBulkMsg(message, addresses) {
+    if (!Array.isArray(addresses)) {
+      throw new Error("Please provide a valid array of addresses.");
+    }
+    if (typeof message !== "string") {
+      throw new Error("Please provide a valid message string.");
+    }
+
+    const promises = addresses.map(async (address) => {
+      try {
+        const response = await this.sendMsg(address, message);
+        return { address, status: true, messageID: response };
+      } catch (error) {
+        return { address, status: false, errorMessage: error.message };
+      }
+    });
+
+    return Promise.all(promises);
   }
 
   /**
@@ -419,5 +463,12 @@ class BlockscanChat {
 
     return checksumAddress;
   }
+
+  static getInstance() {
+    if (!BlockscanChat.instance) {
+      BlockscanChat.instance = new BlockscanChat();
+    }
+    return BlockscanChat.instance;
+  }
 }
-module.exports = BlockscanChat;
+module.exports = BlockscanChat.getInstance();
