@@ -45,7 +45,23 @@ class BlockscanChat {
         const response = await axios.post(`${this.apiUrl}`, formData);
         return response.data.result;
       } catch (error) {
-        throw error;
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          // console.log(error.response.data);
+          // console.log(error.response.status);
+          // console.log(error.response.headers);
+        } else if (error.request) {
+          // The request was made but no response was received
+          // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+          // http.ClientRequest in node.js
+          //jsut console log the error line that starts with "AxiosError"
+          console.log(error.message);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          // console.log(error.message);
+        }
+        // console.log(error.config);
       }
     };
   }
@@ -73,12 +89,22 @@ class BlockscanChat {
 
     this.apiKey = apiKey;
 
-    const formData = new FormData();
-    formData.append("method", "ping");
-    formData.append("apikey", this.apiKey);
+    const response = await this.request({
+      method: "POST",
+      body: {
+        method: "ping",
+        apikey: this.apiKey,
+      },
+    });
 
-    const response = await axios.post(`${this.apiUrl}`, formData);
-    if (response?.data.status !== "1") {
+    const regex = /pong-0x[0-9a-fA-F]{40}/g;
+
+    if (!response) {
+      console.error("No response from API.");
+      return;
+    }
+
+    if (!regex.test(response)) {
       throw new Error(
         "Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable"
       );
@@ -315,6 +341,11 @@ class BlockscanChat {
         msg: message,
       },
     });
+
+    if (!response) {
+      console.error("No response from API.");
+      return;
+    }
 
     // Check if the response is a string and is numeric
     if (typeof response === "string" && /^[0-9]+$/.test(response)) {
