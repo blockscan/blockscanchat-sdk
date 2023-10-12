@@ -99,12 +99,7 @@ class BlockscanChat {
 
     const regex = /pong-0x[0-9a-fA-F]{40}/g;
 
-    if (!response) {
-      console.error("No response from API.");
-      return;
-    }
-
-    if (!regex.test(response)) {
+    if (response != undefined && !regex.test(response)) {
       throw new Error(
         "Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable"
       );
@@ -343,8 +338,7 @@ class BlockscanChat {
     });
 
     if (!response) {
-      console.error("No response from API.");
-      return;
+      throw new Error("No response from API.");
     }
 
     // Check if the response is a string and is numeric
