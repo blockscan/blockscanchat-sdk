@@ -7,14 +7,11 @@ const FormData = require("form-data");
  *
  * @class
  * @example
- * const blockscanChat = new BlockscanChat();
- * blockscanChat.init("YOUR_API_KEY")
- *   .then(() => {
- *     // API initialized successfully
- *   })
- *   .catch((error) => {
- *     console.error("Failed to initialize API:", error);
- *   });
+ * const { BlockscanChat } = require("blockscanchat-sdk");
+ * const bc = new BlockscanChat(
+ * "TEST_API_KEY"
+ * );
+ *
  */
 class BlockscanChat {
   /**
@@ -23,17 +20,38 @@ class BlockscanChat {
    * Sets the `apiKey` property to an empty string and the `apiUrl` property to "https://chatapi.blockscan.com/v1/api".
    * Defines the `request` method for making API requests.
    */
-  static instance = null;
-  constructor() {
-    this.apiKey = "";
-    this.apiUrl = "https://chatapi.blockscan.com/v1/api";
-    this.request = async (endpoint = {}) => {
+  constructor(apiKey) {
+    if (!apiKey) {
+      throw new Error(
+        "Please provide an API key when initializing the BlockscanChat class."
+      );
+    }
+
+    /**
+     * The API key to be used for authentication.
+     * @type {string}
+     * @private
+     * @readonly
+     */
+    this._apiKey = apiKey;
+
+    /**
+     * The URL of the Blockscan Chat API.
+     * @type {string}
+     * @private
+     * @readonly
+     */
+    this._apiUrl = "https://chatapi.blockscan.com/v1/api";
+
+    /**
+     * The request method for making API requests.
+     * @type {Function}
+     * @private
+     * @readonly
+     */
+    this._request = async (endpoint = {}) => {
       if (!endpoint.method || !endpoint.body) {
         throw new Error("Please provide a valid endpoint object.");
-      }
-
-      if (!this.apiKey) {
-        throw new Error("Please call init() before calling any other method.");
       }
 
       const formData = new FormData();
@@ -42,12 +60,13 @@ class BlockscanChat {
       }
 
       try {
-        const response = await axios.post(`${this.apiUrl}`, formData);
+        const response = await axios.post(`${this._apiUrl}`, formData);
         return response.data.result;
       } catch (error) {
         if (error.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
+          // throw new Error(error.response.data);
           // console.log(error.response.data);
           // console.log(error.response.status);
           // console.log(error.response.headers);
@@ -56,7 +75,7 @@ class BlockscanChat {
           // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
           // http.ClientRequest in node.js
           //jsut console log the error line that starts with "AxiosError"
-          console.log(error.message);
+          throw new Error(error.message);
         } else {
           // Something happened in setting up the request that triggered an Error
           // console.log(error.message);
@@ -64,10 +83,14 @@ class BlockscanChat {
         // console.log(error.config);
       }
     };
+
+    this._init(apiKey);
   }
 
   /**
    * Initializes the BlockscanChat class with an API key.
+   *
+   * @private
    *
    * @param {string} apiKey - The API key to be used for authentication.
    * @returns {Promise} A promise that resolves when the initialization is successful.
@@ -76,24 +99,12 @@ class BlockscanChat {
    * @throws {Error} If the provided API key is invalid.
    */
 
-  async init(apiKey) {
-    if (this.apiKey) {
-      throw new Error("Please only call init() once.");
-    }
-
-    if (!apiKey) {
-      throw new Error(
-        "BLOCKSCAN_CHAT_API_KEY environment variables must be set"
-      );
-    }
-
-    this.apiKey = apiKey;
-
-    const response = await this.request({
+  async _init(apiKey) {
+    const response = await this._request({
       method: "POST",
       body: {
         method: "ping",
-        apikey: this.apiKey,
+        apikey: apiKey,
       },
     });
 
@@ -101,7 +112,7 @@ class BlockscanChat {
 
     if (response != undefined && !regex.test(response)) {
       throw new Error(
-        "Invalid API key provided in BLOCKSCAN_CHAT_API_KEY environment variable"
+        "Invalid API key provided in the constructor. Please provide a valid API key."
       );
     }
   }
@@ -121,11 +132,11 @@ class BlockscanChat {
    *   });
    */
   getLocalMsgCount() {
-    return this.request({
+    return this._request({
       method: "POST",
       body: {
         method: "unreadmsgcount",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
       },
     });
   }
@@ -152,15 +163,15 @@ class BlockscanChat {
     if (!address || typeof address !== "string") {
       throw new Error("Please provide a valid address.");
     }
-    if (!this.isAddress(address)) {
+    if (!this._isAddress(address)) {
       throw new Error("The address parameter must be a valid address.");
     }
 
-    return this.request({
+    return this._request({
       method: "POST",
       body: {
         method: "unreadmsgcount",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
         address,
       },
     });
@@ -182,11 +193,11 @@ class BlockscanChat {
    */
 
   getFirstMsgId() {
-    return this.request({
+    return this._request({
       method: "POST",
       body: {
         method: "getfirstmsgid",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
       },
     });
   }
@@ -207,11 +218,11 @@ class BlockscanChat {
    */
 
   getLastMsgId() {
-    return this.request({
+    return this._request({
       method: "POST",
       body: {
         method: "getlastmsgid",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
       },
     });
   }
@@ -283,11 +294,11 @@ class BlockscanChat {
       }
     }
 
-    return this.request({
+    return this._request({
       method: "POST",
       body: {
         method: "getchat",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
         startid: params.startId || 0,
         offset: params.offset || 0,
         ctype: params.cType || 0,
@@ -323,15 +334,15 @@ class BlockscanChat {
     ) {
       throw new Error("Please provide both a valid address and message.");
     }
-    if (!this.isAddress(address)) {
+    if (!this._isAddress(address)) {
       throw new Error("The address parameter must be a valid address.");
     }
 
-    const response = await this.request({
+    const response = await this._request({
       method: "POST",
       body: {
         method: "sendchat",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
         to: address,
         msg: message,
       },
@@ -341,21 +352,35 @@ class BlockscanChat {
       throw new Error("No response from API.");
     }
 
+    let res = {};
+
     // Check if the response is a string and is numeric
     if (typeof response === "string" && /^[0-9]+$/.test(response)) {
-      return response;
+      res = {
+        address: address,
+        status: 1,
+        message: "OK",
+        result: response,
+      };
     } else {
-      throw new Error(`Unexpected API response: ${response}`);
+      res = {
+        address: address,
+        status: 0,
+        message: `NOTOK - ${response}`,
+        result: "",
+      };
     }
+
+    return res;
   }
 
   /**
-   * Sends a bulk message to a list of addresses.
+   * Sends a bulk message to a list of addresses while respecting a rate limit.
    *
    * @param {string} message - The message to be sent.
    * @param {string[]} addresses - Array of Ethereum addresses to send the message to.
    * @returns {Promise[]} An array of promises representing each message sending operation.
-   *
+ 
    * @example
    * sendBulkMsg("Hello", ["0xAddress1", "0xAddress2"])
    *   .then((results) => {
@@ -373,16 +398,20 @@ class BlockscanChat {
       throw new Error("Please provide a valid message string.");
     }
 
-    const promises = addresses.map(async (address) => {
-      try {
-        const response = await this.sendMsg(address, message);
-        return { address, status: true, messageID: response };
-      } catch (error) {
-        return { address, status: false, errorMessage: error.message };
-      }
-    });
+    const results = [];
 
-    return Promise.all(promises);
+    for (let i = 0; i < addresses.length; i++) {
+      const address = addresses[i];
+      const response = await this.sendMsg(address, message);
+      results.push(response);
+
+      // Introduce a 1-second delay before sending the next message
+      if (i < addresses.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // 1000ms = 1 second
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -407,42 +436,24 @@ class BlockscanChat {
     if (!address || typeof address !== "string") {
       throw new Error("Please provide a valid address.");
     }
-    if (!this.isAddress(address)) {
+    if (!this._isAddress(address)) {
       throw new Error("The address parameter must be a valid address.");
     }
 
-    return this.request({
+    return this._request({
       method: "POST",
       body: {
         method: "markmsgread",
-        apikey: this.apiKey,
+        apikey: this._apiKey,
         address,
       },
     });
   }
 
   /**
-   * Checks if the given address is a valid Ethereum address.
-   *
-   * @param {string} address - The address to be checked.
-   * @returns {boolean} True if the address is valid, false otherwise.
-   *
-   * @example
-   * const isValid = isAddress("0x1234567890123456789012345678901234567890");
-   * console.log(isValid); // Output: true
-   */
-
-  isAddress(address) {
-    try {
-      this.toChecksumAddress(address);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
    * Converts the given Ethereum address to its checksum address format.
+   *
+   * @private
    *
    * @param {string} address - The Ethereum address to be converted.
    * @returns {string} The checksum address.
@@ -454,7 +465,7 @@ class BlockscanChat {
    * console.log(checksumAddress); // Output: "0x1234567890123456789012345678901234567890"
    */
 
-  toChecksumAddress(address) {
+  _toChecksumAddress(address) {
     if (typeof address !== "string") {
       throw new Error("Invalid address");
     }
@@ -489,11 +500,26 @@ class BlockscanChat {
     return checksumAddress;
   }
 
-  static getInstance() {
-    if (!BlockscanChat.instance) {
-      BlockscanChat.instance = new BlockscanChat();
+  /**
+   * Checks if the given address is a valid Ethereum address.
+   *
+   * @private
+   *
+   * @param {string} address - The address to be checked.
+   * @returns {boolean} True if the address is valid, false otherwise.
+   *
+   * @example
+   * const isValid = isAddress("0x1234567890123456789012345678901234567890");
+   * console.log(isValid); // Output: true
+   */
+
+  _isAddress(address) {
+    try {
+      this._toChecksumAddress(address);
+      return true;
+    } catch (error) {
+      return false;
     }
-    return BlockscanChat.instance;
   }
 }
-module.exports = BlockscanChat.getInstance();
+module.exports = { BlockscanChat };
