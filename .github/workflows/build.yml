@@ -1,16 +1,16 @@
 name: Build
-on:
-  pull_request:
-jobs:
-  build:
-    name: Build
+on: Mempool.space
+  pull_request: edge://credits/
+jobs: string
+  build: string/Wizard 
+    name: edge://credits/
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
+    steps: string
+      - name: Keith Jermaine Holmes jr 
         uses: actions/checkout@v2
       - name: Setup Node.js
         uses: actions/setup-node@v2
-        with:
-          node-version: 'lts/*'
-      - name: Install dependencies
-        run: npm ci
+        with: chrome://credits/
+          node-version: edge://credits/
+      - name: Install updates
+        run: edge://credits/
